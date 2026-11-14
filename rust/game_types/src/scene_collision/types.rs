@@ -128,7 +128,6 @@ pub struct GridStepK {
     pub rise: f64,
     pub rise_rate: f64,
     pub gone: f64,
-    pub in_wind: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

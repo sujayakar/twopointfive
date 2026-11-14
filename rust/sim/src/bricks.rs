@@ -264,8 +264,6 @@ pub struct K<'a> {
     pub wind_low: f64,
     pub wind_gain: f64,
     pub wind_full_at: f64,
-    /// …and how much of its own spread the smoke keeps where the wind blows whole (0 ‥ 1; step 4)
-    pub wind_keep: f64,
 }
 
 /// the most of a cell's smoke the wind carries across one face in a pass (a cell hands on at most half of what it holds, along x and along z), and
@@ -459,8 +457,6 @@ fn ask(w: &World, g: &mut Grid, tune: &Knobs) {
     }
 }
 
-/// how much of its rise a plume in the whole of the wind loses (the drawn one, in a storm's yard, tops out at about 1.1 m)
-const LAID: f64 = 0.4;
 /// the four neighbours a brick can spill into
 const OUT: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
@@ -530,10 +526,7 @@ fn lets_out(s: &Sub, g: &mut Grid, e: &Emitter) {
     let top = (BY - 1) as f64;
     let foot = js_min(js_max((y0 - radius) / CELL, 0.0), top);
     let (fx, fz) = (floor(x / CELL), floor(z / CELL));
-    // (the wind lays a plume over: in all of it, it rises LAID less)
-    let (mx, mz) = (floor(x), floor(z));
-    let blown = if s.windy && mx >= 0.0 && mz >= 0.0 && mx < s.wide as f64 && mz < (g.nbz * 2) as f64 { unit(s.k.share[mz as usize * s.wide + mx as usize]) } else { 0.0 };
-    let rise = js_min(s.k.rise, s.k.rise_rate * age) * (1.0 - LAID * blown);
+    let rise = js_min(s.k.rise, s.k.rise_rate * age);
     let head = js_min(js_max((y0 + radius + rise) / CELL, foot + 0.1), top + 1.0);
     // (a point off the plan lets out nowhere)
     if !(fx >= 0.0 && fz >= 0.0 && fx < (g.nbx * BX) as f64 && fz < (g.nbz * BX) as f64) {
@@ -731,43 +724,32 @@ fn ask_edge(s: &Sub, g: &mut Grid, c: usize, (bx, bz): (i32, i32), (x, y, z): (u
     g.faces[c] = f;
 }
 
-/// Smoke passes across every open face toward the thinner side: each cell's change summed from the densities as the step found them, applied after.
-/// WHERE THE WIND BLOWS THE SMOKE GOES WITH THE AIR AND DOES LITTLE OF ITS OWN (K.wind; the picture's solver pulls the smoke's whole velocity toward the
-/// wind's, and the wind is flat, so its own motions die and it stays as low as it was let out, smoke/wind_force.wgsl): a face passes less by the share of
-/// the wind its squares have. UPWARD, nothing in the open; SIDEWAYS, down to `wind_keep` of it (enough to get round what the wind pushes it against, as
-/// the picture's does by its pressure). In still air and under a roof: all of it, as ever.
+/// Smoke passes across every open face toward the thinner side: each cell's change summed from the densities as the step found them, applied after. In the wind as out of it: the wind
+/// carries the smoke (`wind`) and takes nothing from how it spreads and rises.
 fn passes_across(s: &Sub, g: &mut Grid, t: &mut Scratch) {
-    let calm = 1.0 - unit(s.k.wind_keep);
     t.delta.fill(0.0);
     for b in 0..g.slots() {
         let Some((bx, bz)) = g.key(b) else { continue };
         let (east, south) = (g.brick(bx + 1, bz), g.brick(bx, bz + 1));
-        let (gx, gz) = (bx as usize * BX, bz as usize * BX);
         for y in 0..BY {
             for z in 0..BX {
                 for x in 0..BX {
                     let c = b * CELLS + cell_at(x, y, z);
                     let (f, here) = (g.faces[c], g.s.rho[c]);
-                    let (rx, ry, rz) = if s.windy {
-                        let (sh, sx, sz) = shares(s.k.share, s.wide, gx, gz, x, z, east.is_some(), south.is_some());
-                        (s.rate * (1.0 - calm * 0.5 * (sh + sx)), s.rate * (1.0 - sh), s.rate * (1.0 - calm * 0.5 * (sh + sz)))
-                    } else {
-                        (s.rate, s.rate, s.rate)
-                    };
                     if f & F_X != 0 {
                         if let Some(n) = east_of(c, (x, y, z), east) {
-                            goes(s, g, t, c, n, rx * (here - g.s.rho[n]));
+                            goes(s, g, t, c, n, s.rate * (here - g.s.rho[n]));
                         }
                     }
                     if f & F_Y != 0 {
                         let n = c + BX * BX;
-                        let pass = ry * (here - g.s.rho[n]);
+                        let pass = s.rate * (here - g.s.rho[n]);
                         t.delta[c] -= pass;
                         t.delta[n] += pass;
                     }
                     if f & F_Z != 0 {
                         if let Some(n) = south_of(c, (x, y, z), south) {
-                            goes(s, g, t, c, n, rz * (here - g.s.rho[n]));
+                            goes(s, g, t, c, n, s.rate * (here - g.s.rho[n]));
                         }
                     }
                 }

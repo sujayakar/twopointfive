@@ -81,7 +81,7 @@ pub fn smoke_step(g: &mut crate::game::Game, dt: f64) {
         return;
     }
     let s = g.k.sense.smoke;
-    let k = crate::scene_collision::GridStepK { decay: s.decay, spread: s.spread, rise: s.rise, rise_rate: s.rise_rate, gone: s.gone, in_wind: s.in_wind };
+    let k = crate::scene_collision::GridStepK { decay: s.decay, spread: s.spread, rise: s.rise, rise_rate: s.rise_rate, gone: s.gone };
     let wind = if smoky(g) { crate::wind::wind_storm_drift(g) } else { None };
     let sweep = g.k.sense.glow.sweep;
     crate::scene_collision::grid_step(g, n, k, sweep, wind.as_ref());

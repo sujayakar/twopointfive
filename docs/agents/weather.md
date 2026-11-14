@@ -87,7 +87,7 @@ other roll.
 | lightning | the light meter's stand-in | `stroke_light`, under a picked weather only |
 | sun, sky, cloud | every question of light | `light_in` adds `sun_light`, `dome_light`; which ways from a place reach the sky is `rust/sim/src/dome.rs`, kept by half metre, in no save |
 | the hour | `darkdoor.rs`, `calmtorch.rs`, the kit picture's porch lamp | `hour_of`, `hour_has_lamps_out` |
-| storm wind | the rules' smoke grid | `wind_storm_drift` into `grid_step`, from `sense.rs`. No other wind reaches a rule |
+| storm wind | the rules' smoke grid | `wind_storm_drift` into `grid_step`, from `sense.rs`: it carries smoke, which rises and spreads as in still air. No other wind reaches a rule |
 | deep snow | a thrown thing's bounce and slide, the squad's forecast of a throw | `snow_bog_at`, `bog_run`; `throwables/`, `throwplan.rs`, `squadsmoke.rs` |
 | a fire's lamp | the light meter | a real light, moved by `update_fire` |
 

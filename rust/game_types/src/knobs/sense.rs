@@ -26,9 +26,6 @@ pub struct SenseKSmoke {
     /// how far smoke rises above where it was let out (m), and how fast (m/s)
     #[k(1.0)] pub rise: f64,
     #[k(0.3)] pub rise_rate: f64,
-    /// how much of its own spread SIDEWAYS the smoke keeps where the wind blows whole (bricks.rs step 4; upward it keeps none: the wind is flat). With none of it
-    ///  the smoke cannot get round what the wind pushes it against, and a plume never widens
-    #[k(0.15)] pub in_wind: f64,
     /// an emitter that lets out less than this in its whole life (density × volume, unit·m³) is the picture's alone: a muzzle's wisp, a spark's trail hide nobody
     #[k(0.05)] pub least: f64,
     /// a brick thinner than this (unit·m³) is gone
