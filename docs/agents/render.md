@@ -64,7 +64,7 @@ every GPU ray meets the cut solid. The trace grid and the smoke's obstacle bake 
 **Surfaces.** Maps (`look.wgsl`, made in `lookTex.ts`, on workers), wear (`detail.wgsl`) and decals are read only in the g-buffer, so a
 ray's hit sees a box's flat paint. A box's stuff is a word in its own record, never guessed from its color.
 
-**The march.** `volumetrics.wgsl` is one program on every tier, and there is no froxel grid. A tier differs by numbers (`Caps`, `volSteps`, its size).
+**The march.** `volumetrics.wgsl` is one program on every tier. A tier differs by numbers (`Caps`, `volSteps`, its size, which a cut picture keeps: `volDivisor`).
 It returns the light in-scattered and what is left of what lies behind.
 
 **Smoke has two models.** What eyes see through is the game's: half-meter cells in `rust/sim/src/bricks.rs`, stepped ten times a second, the same
